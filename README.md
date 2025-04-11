@@ -6,6 +6,25 @@ Disponível para execução em:
 
 ---
 
+# Funcionalidades do MIPS
+
+MIPS_connectivity(main).sv
+Este é o módulo principal em SystemVerilog que integra todos os componentes do processador MIPS monociclo. Ele define o datapath e conecta os submódulos (como ALU, banco de registradores, memórias e unidade de controle) usando fios e portas, formando a arquitetura completa do processador.
+
+MIPS_controller.txt
+Contém a descrição ou implementação da unidade de controle. Especifica os sinais de controle (ex.: RegWrite, MemWrite, ALUSrc) gerados com base no opcode da instrução, coordenando o comportamento dos outros componentes do processador.
+
+MIPS_datapath_components.txt
+Descreve os componentes do datapath, como o Program Counter (PC), banco de registradores, ALU, memória de instruções e memória de dados. Detalha como esses elementos processam os dados durante a execução de uma instrução.
+
+MIPS_instructions.txt
+Lista as instruções MIPS suportadas pelo processador, possivelmente em formato assembly, binário ou hexadecimal. Pode incluir exemplos de programas ou a codificação das instruções para carregar na memória de instruções.
+
+MIPS_testbench.txt
+Define o testbench para simulação do processador. Inclui a instanciação do módulo principal, geração de clock, inicialização do sistema (ex.: reset, carregamento de instruções) e monitoramento das saídas para verificar o funcionamento correto.
+
+---
+
 ## Dados da arquitetura e microarquitetura
 
 - Suporta instruções MIPS padrão de 32 bits
