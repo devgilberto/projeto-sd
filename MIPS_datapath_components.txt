@@ -1,0 +1,262 @@
+// Design
+// MIPS datapath components
+
+// name: Enabled register
+// declaration: PARAMETER width of register,
+//				clock, reset, load enable, data in, data out.
+
+module register #(
+  parameter width = 32
+  )(
+  input logic clk,
+  input logic rst,
+  input logic ld,
+  input logic [width-1:0] D,
+  output logic [width-1:0] Q,
+  );
+  
+  always_ff @(posedge clk) begin
+    if (rst==1)
+      Q <= 0;
+    else begin
+      if (ld==1'b1)
+        Q <= D;
+    end
+  end
+  
+endmodule
+
+// name: Register file
+// declaration: PARAMETER address width,
+//				PARAMETER width of register,
+//				clock, reset,
+//				write enable, write address, data in,
+//				read address 1, read address 2,
+//				data out 1, data out 2.
+
+module registerFile #(
+  parameter adsWidth = 5,
+  parameter regWidth = 32
+  )(
+  input logic clk,
+  input logic rst,
+  input logic ld,
+  input logic [adsWidth-1:0] wrAds,
+  input logic [regWidth-1:0] D,
+  input logic [adsWidth-1:0] rdAds1,
+  input logic [adsWidth-1:0] rdAds2,
+  output logic [regWidth-1:0] Q1,
+  output logic [regWidth-1:0] Q2
+  );
+  
+  logic [2**adsWidth-1:0] wrEnable;
+  logic [2**adsWidth-1:0][regWidth-1:0] Q;
+  
+  genvar i;
+  generate
+    
+    for (i=0;i<(2**adsWidth);i++) begin : word
+      register #(regWidth) line (clk, rst, wrEnable[i], D, Q[i]);
+    end
+    
+  endgenerate
+  
+  assign Q1 = Q[rdAds1];
+  assign Q2 = Q[rdAds2];
+  
+  always_comb begin
+    
+    if (ld==1)
+      wrEnable[wrAds] = 1;
+    else
+      wrEnable = 0;
+    
+  end
+  
+endmodule
+
+// name: ALU
+// declaration: PARAMETER operands size,
+//				operand A, operand B,
+//				ALU control,
+//				result out.
+
+module ALU #(
+  parameter size = 32
+  )(
+  input logic [size-1:0] A,
+  input logic [size-1:0] B,
+  input logic [2:0] ALUctrl,
+  output logic [size-1:0] RES
+  );
+  always_comb begin
+    
+    case (ALUctrl)
+
+      3'b000: RES=A&B;
+      3'b001: RES=A|B;
+      3'b010: RES=A+B;
+      3'b110: RES=A-B;
+      3'b111: RES=A<<B?1:0;
+
+    endcase
+    
+    zero=(RES==0);
+    
+  end
+  
+endmodule
+
+// name: ALUctrl
+// declaration: function (instruction[5:0]), ALUop from controller,
+//				ALU control out.
+
+module ALUctrl(
+  input logic [5:0] funct,
+  input logic [1:0] ALUop,
+  output logic [2:0] ALUctrl
+  );
+  always_comb begin
+    
+    if (ALUop==2'b10) begin
+      case (funct)
+
+        32: ALUctrl=3'b010;
+        34: ALUctrl=3'b110;
+        36: ALUctrl=3'b000;
+        37: ALUctrl=3'b001;
+        42: ALUctrl=3'b111;
+
+      endcase
+    end
+    
+    if (ALUop==2'b00) ALUctrl=3'b010;
+    if (ALUop==2'b01) ALUctrl=3'b110;
+    
+  end
+  
+endmodule
+
+// name: adder
+// declaration: PARAMETER operands size,
+//				operand A, operand B,
+//				result out.
+
+module adder #(
+  parameter size = 32
+  )(
+  input logic [size-1:0] A,
+  input logic [size-1:0] B,
+  output logic [size-1:0] RES
+  );
+  always_comb begin
+    
+    assign RES = A + B;
+    
+  end
+  
+endmodule
+
+// name: Shift Left 2
+// declaration: PARAMETER size,
+//				input A,
+//				result out.
+
+module SL2 #(
+  parameter size = 32
+  )(
+  input logic [size-1:0] IN,
+  output logic [size-1:0] OUT
+  );
+  always_comb begin
+    
+    assign OUT = {IN[size-3:0],2'b00};
+    
+  end
+  
+endmodule
+
+// name: Sign extender
+// declaration: PARAMETER input size,
+//				PARAMETER output size,
+//				input A,
+//				output out.
+
+module SEX #(
+  parameter insize = 16,
+  parameter outsize = 32
+  )(
+  input logic [insize-1:0] IN,
+  output logic [outsize-1:0] OUT
+  );
+  always_comb begin
+    
+    assign OUT = {{(outsize-insize){IN[insize-1]}},IN};
+    
+  end
+  
+endmodule
+
+// name: Data memory
+// declaration: PARAMETER address width,
+//				PARAMETER width of byte,
+//				clock, write/read address,
+//				write enable, data in,
+//				read enable, data out.
+
+module dataMem #(
+  parameter adsWidth = 6, // supposed to be 32
+  parameter byteWidth = 8
+  )(
+  input logic clk,
+  input logic [adsWidth-1:0] wrRdAds,
+  input logic wrEn,
+  input logic [4*byteWidth-1:0] D,
+  input logic rdEn,
+  output logic [4*byteWidth-1:0] Q
+  );
+  
+  logic [2**adsWidth-1:0][byteWidth-1:0] MEM;
+  
+  always_comb begin
+    
+    if (rdEn==1) begin
+      Q = {MEM[wrRdAds],MEM[wrRdAds+1],MEM[wrRdAds+2],MEM[wrRdAds+3]};
+    end
+    
+  end
+  
+  always_ff @(posedge clk) begin
+    if (wrEn==1) begin
+      {MEM[wrRdAds],MEM[wrRdAds+1],MEM[wrRdAds+2],MEM[wrRdAds+3]} <= D;
+    end
+    
+  end
+  
+endmodule
+
+// name: instruction memory
+// declaration: PARAMETER address width,
+//				PARAMETER width of byte,
+//				read address,
+//				data out.
+
+module instMem #(
+  parameter adsWidth = 6, // supposed to be 32
+  parameter byteWidth = 8
+  )(
+  input logic [adsWidth-1:0] rdAds,
+  output logic [4*byteWidth-1:0] Q
+  );
+  
+  logic [byteWidth-1:0] MEM [2**adsWidth-1:0];
+  
+  initial begin
+    $readmemh("MIPS_intructions.txt", MEM);
+  end  
+  
+  always_comb begin
+      Q = {MEM[rdAds],MEM[rdAds+1],MEM[rdAds+2],MEM[rdAds+3]};
+  end
+  
+endmodule
