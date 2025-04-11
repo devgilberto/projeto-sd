@@ -6,8 +6,6 @@ Disponível para execução em:
 
 ---
 
-![Diagrama do processador](https://github.com/naftali10/Single-Cycle_MIPS/blob/main/SIngle%20Cycle%20MIPS%20Diagram.png)
-
 ## Dados da arquitetura e microarquitetura
 
 - Suporta instruções MIPS padrão de 32 bits
