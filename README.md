@@ -63,7 +63,7 @@ MIPS_datapath_components.txt
 Descreve os componentes do datapath, como o Program Counter (PC), banco de registradores, ALU, memória de instruções e memória de dados. Detalha como esses elementos processam os dados durante a execução de uma instrução.
 
 MIPS_instructions.txt
-Lista as instruções MIPS suportadas pelo processador, possivelmente em formato assembly, binário ou hexadecimal. Pode incluir exemplos de programas ou a codificação das instruções para carregar na memória de instruções.
+Lista as instruções MIPS suportadas pelo processador, binário ou hexadecimal. Pode incluir exemplos de programas ou a codificação das instruções para carregar na memória de instruções.
 
 MIPS_testbench.txt
 Define o testbench para simulação do processador. Inclui a instanciação do módulo principal, geração de clock, inicialização do sistema (ex.: reset, carregamento de instruções) e monitoramento das saídas para verificar o funcionamento correto.
