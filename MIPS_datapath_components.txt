@@ -1,108 +1,262 @@
-// Datapath_components.sv
-// Define os componentes do datapath do processador MIPS de ciclo único.
-// Inclui ALU, memórias de dados e instruções, banco de registradores e contador de programa.
+// Design
+// MIPS datapath components
 
-module ALU (
-    input logic [31:0] SrcA, SrcB,           // Entradas da ALU
-    input logic [2:0] ALUControl,            // Sinal que define a operação
-    output logic [31:0] ALUResult,           // Resultado da operação
-    output logic Zero                        // Indica se o resultado é zero
-);
-    // Executa operação selecionada por ALUControl
-    always_comb begin
-        case (ALUControl)
-            3'b000: ALUResult = SrcA & SrcB; // AND
-            3'b001: ALUResult = SrcA | SrcB; // OR
-            3'b010: ALUResult = SrcA + SrcB; // ADD
-            3'b110: ALUResult = SrcA - SrcB; // SUB
-            3'b111: ALUResult = (SrcA < SrcB) ? 32'd1 : 32'd0; // SLT
-            default: ALUResult = 32'd0;      // Padrão
-        endcase
-        Zero = (ALUResult == 32'd0);         // Define Zero para desvios
+// name: Enabled register
+// declaration: PARAMETER width of register,
+//				clock, reset, load enable, data in, data out.
+
+module register #(
+  parameter width = 32
+  )(
+  input logic clk,
+  input logic rst,
+  input logic ld,
+  input logic [width-1:0] D,
+  output logic [width-1:0] Q,
+  );
+  
+  always_ff @(posedge clk) begin
+    if (rst==1)
+      Q <= 0;
+    else begin
+      if (ld==1'b1)
+        Q <= D;
     end
+  end
+  
 endmodule
 
-module DataMemory (
-    input logic clk,                         // Clock do sistema
-    input logic MemRead,                     // Habilita leitura
-    input logic MemWrite,                    // Habilita escrita
-    input logic [31:0] Address,              // Endereço de acesso
-    input logic [31:0] WriteData,            // Dados a serem escritos
-    output logic [31:0] ReadData             // Dados lidos
-);
-    logic [7:0] memory [255:0];              // Memória de 256 bytes
+// name: Register file
+// declaration: PARAMETER address width,
+//				PARAMETER width of register,
+//				clock, reset,
+//				write enable, write address, data in,
+//				read address 1, read address 2,
+//				data out 1, data out 2.
 
-    // Leitura combinacional
-    always_comb begin
-        if (MemRead)
-            ReadData = {memory[Address], memory[Address+1], memory[Address+2], memory[Address+3]}; // Monta palavra de 32 bits
-        else
-            ReadData = 32'd0;
+module registerFile #(
+  parameter adsWidth = 5,
+  parameter regWidth = 32
+  )(
+  input logic clk,
+  input logic rst,
+  input logic ld,
+  input logic [adsWidth-1:0] wrAds,
+  input logic [regWidth-1:0] D,
+  input logic [adsWidth-1:0] rdAds1,
+  input logic [adsWidth-1:0] rdAds2,
+  output logic [regWidth-1:0] Q1,
+  output logic [regWidth-1:0] Q2
+  );
+  
+  logic [2**adsWidth-1:0] wrEnable;
+  logic [2**adsWidth-1:0][regWidth-1:0] Q;
+  
+  genvar i;
+  generate
+    
+    for (i=0;i<(2**adsWidth);i++) begin : word
+      register #(regWidth) line (clk, rst, wrEnable[i], D, Q[i]);
     end
-
-    // Escrita síncrona
-    always_ff @(posedge clk) begin
-        if (MemWrite) begin
-            memory[Address]   <= WriteData[31:24];
-            memory[Address+1] <= WriteData[23:16];
-            memory[Address+2] <= WriteData[15:8];
-            memory[Address+3] <= WriteData[7:0];
-        end
-    end
+    
+  endgenerate
+  
+  assign Q1 = Q[rdAds1];
+  assign Q2 = Q[rdAds2];
+  
+  always_comb begin
+    
+    if (ld==1)
+      wrEnable[wrAds] = 1;
+    else
+      wrEnable = 0;
+    
+  end
+  
 endmodule
 
-module InstructionMemory (
-    input logic [31:0] Address,              // Endereço da instrução (PC)
-    output logic [31:0] Instruction          // Instrução lida
-);
-    logic [31:0] memory [255:0];             // Memória de 256 palavras
+// name: ALU
+// declaration: PARAMETER operands size,
+//				operand A, operand B,
+//				ALU control,
+//				result out.
 
-    // Exemplo de inicialização (substitua com instruções reais)
-    initial begin
-        memory[0] = 32'h20020005;           // addi $2, $0, 5
-        memory[1] = 32'h2003000c;           // addi $3, $0, 12
-        // Adicione mais instruções
-    end
+module ALU #(
+  parameter size = 32
+  )(
+  input logic [size-1:0] A,
+  input logic [size-1:0] B,
+  input logic [2:0] ALUctrl,
+  output logic [size-1:0] RES
+  );
+  always_comb begin
+    
+    case (ALUctrl)
 
-    assign Instruction = memory[Address >> 2]; // Acessa palavra de 32 bits
+      3'b000: RES=A&B;
+      3'b001: RES=A|B;
+      3'b010: RES=A+B;
+      3'b110: RES=A-B;
+      3'b111: RES=A<<B?1:0;
+
+    endcase
+    
+    zero=(RES==0);
+    
+  end
+  
 endmodule
 
-module ProgramCounter (
-    input logic clk,                         // Clock do sistema
-    input logic reset,                       // Sinal de reset
-    input logic [31:0] PCNext,               // Próximo PC
-    output logic [31:0] PC                   // PC atual
-);
-    // Atualiza PC na borda de subida do clock
-    always_ff @(posedge clk or posedge reset) begin
-        if (reset)
-            PC <= 32'd0;                     // Reseta para 0
-        else
-            PC <= PCNext;                    // Atualiza para próximo endereço
+// name: ALUctrl
+// declaration: function (instruction[5:0]), ALUop from controller,
+//				ALU control out.
+
+module ALUctrl(
+  input logic [5:0] funct,
+  input logic [1:0] ALUop,
+  output logic [2:0] ALUctrl
+  );
+  always_comb begin
+    
+    if (ALUop==2'b10) begin
+      case (funct)
+
+        32: ALUctrl=3'b010;
+        34: ALUctrl=3'b110;
+        36: ALUctrl=3'b000;
+        37: ALUctrl=3'b001;
+        42: ALUctrl=3'b111;
+
+      endcase
     end
+    
+    if (ALUop==2'b00) ALUctrl=3'b010;
+    if (ALUop==2'b01) ALUctrl=3'b110;
+    
+  end
+  
 endmodule
 
-module RegisterFile (
-    input logic clk,                         // Clock do sistema
-    input logic RegWrite,                    // Habilita escrita
-    input logic [4:0] ReadReg1, ReadReg2,    // Registradores a serem lidos
-    input logic [4:0] WriteReg,              // Registrador a ser escrito
-    input logic [31:0] WriteData,            // Dados a serem escritos
-    output logic [31:0] ReadData1, ReadData2 // Dados lidos
-);
-    logic [31:0] registers [31:0];           // 32 registradores de 32 bits
+// name: adder
+// declaration: PARAMETER operands size,
+//				operand A, operand B,
+//				result out.
 
-    initial begin
-        registers[0] = 32'd0;                // $zero sempre 0
+module adder #(
+  parameter size = 32
+  )(
+  input logic [size-1:0] A,
+  input logic [size-1:0] B,
+  output logic [size-1:0] RES
+  );
+  always_comb begin
+    
+    assign RES = A + B;
+    
+  end
+  
+endmodule
+
+// name: Shift Left 2
+// declaration: PARAMETER size,
+//				input A,
+//				result out.
+
+module SL2 #(
+  parameter size = 32
+  )(
+  input logic [size-1:0] IN,
+  output logic [size-1:0] OUT
+  );
+  always_comb begin
+    
+    assign OUT = {IN[size-3:0],2'b00};
+    
+  end
+  
+endmodule
+
+// name: Sign extender
+// declaration: PARAMETER input size,
+//				PARAMETER output size,
+//				input A,
+//				output out.
+
+module SEX #(
+  parameter insize = 16,
+  parameter outsize = 32
+  )(
+  input logic [insize-1:0] IN,
+  output logic [outsize-1:0] OUT
+  );
+  always_comb begin
+    
+    assign OUT = {{(outsize-insize){IN[insize-1]}},IN};
+    
+  end
+  
+endmodule
+
+// name: Data memory
+// declaration: PARAMETER address width,
+//				PARAMETER width of byte,
+//				clock, write/read address,
+//				write enable, data in,
+//				read enable, data out.
+
+module dataMem #(
+  parameter adsWidth = 6, // supposed to be 32
+  parameter byteWidth = 8
+  )(
+  input logic clk,
+  input logic [adsWidth-1:0] wrRdAds,
+  input logic wrEn,
+  input logic [4*byteWidth-1:0] D,
+  input logic rdEn,
+  output logic [4*byteWidth-1:0] Q
+  );
+  
+  logic [2**adsWidth-1:0][byteWidth-1:0] MEM;
+  
+  always_comb begin
+    
+    if (rdEn==1) begin
+      Q = {MEM[wrRdAds],MEM[wrRdAds+1],MEM[wrRdAds+2],MEM[wrRdAds+3]};
     end
-
-    // Leitura combinacional
-    assign ReadData1 = (ReadReg1 == 0) ? 32'd0 : registers[ReadReg1];
-    assign ReadData2 = (ReadReg2 == 0) ? 32'd0 : registers[ReadReg2];
-
-    // Escrita síncrona
-    always_ff @(posedge clk) begin
-        if (RegWrite && WriteReg != 0)
-            registers[WriteReg] <= WriteData; // Evita escrita em $zero
+    
+  end
+  
+  always_ff @(posedge clk) begin
+    if (wrEn==1) begin
+      {MEM[wrRdAds],MEM[wrRdAds+1],MEM[wrRdAds+2],MEM[wrRdAds+3]} <= D;
     end
+    
+  end
+  
+endmodule
+
+// name: instruction memory
+// declaration: PARAMETER address width,
+//				PARAMETER width of byte,
+//				read address,
+//				data out.
+
+module instMem #(
+  parameter adsWidth = 6, // supposed to be 32
+  parameter byteWidth = 8
+  )(
+  input logic [adsWidth-1:0] rdAds,
+  output logic [4*byteWidth-1:0] Q
+  );
+  
+  logic [byteWidth-1:0] MEM [2**adsWidth-1:0];
+  
+  initial begin
+    $readmemh("MIPS_intructions.txt", MEM);
+  end  
+  
+  always_comb begin
+      Q = {MEM[rdAds],MEM[rdAds+1],MEM[rdAds+2],MEM[rdAds+3]};
+  end
+  
 endmodule
