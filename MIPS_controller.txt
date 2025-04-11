@@ -1,92 +1,95 @@
-// Design
-// MIPS cntroller
+// ControlUnit.sv
+// Unidade de controle do processador MIPS de ciclo único.
+// Gera sinais de controle com base no opcode e no campo funct para gerenciar o datapath.
 
-// name: controller
-// declaration: opcode
-//				RF write enable, RF address source, RF data source.
-//				ALU operand B source, ALUop,
-//				data memory write enable, data memory read enable,
-//				branch, jump.
+module ControlUnit (
+    input logic [5:0] Opcode,                // Opcode da instrução
+    input logic [5:0] Funct,                 // Campo funct para instruções R-type
+    output logic RegDst,                     // Seleciona rd (1) ou rt (0) como registrador de destino
+    output logic ALUSrc,                     // Seleciona imediato (1) ou registrador (0) para ALU
+    output logic MemtoReg,                   // Seleciona dados da memória (1) ou ALU (0) para escrita
+    output logic RegWrite,                   // Habilita escrita no banco de registradores
+    output logic MemRead,                    // Habilita leitura da memória de dados
+    output logic MemWrite,                   // Habilita escrita na memória de dados
+    output logic Branch,                     // Indica instrução de desvio condicional (beq)
+    output logic [2:0] ALUControl            // Define operação da ALU
+);
 
-module controller (
-  input logic [5:0] opcode,
-  output logic regWrite,
-  output logic regDst,
-  output logic MemToReg,
-  output logic ALUSrc,
-  output logic [1:0] ALUOp,
-  output logic MemWrite,
-  output logic MemRead,
-  output logic branch,
-  output logic jump
-  );
-  
-  always_comb begin
-    
-    case (opcode)
+    logic [1:0] ALUOp;                       // Sinal intermediário para controle da ALU
 
-      6'b000000: begin // R-type
-        regWrite=1;
-        regDst=1;
-        MemToReg=0;
-        ALUSrc=0;
-        ALUOp=2'b10;
-        MemWrite=0;
-        MemRead=0;
-        branch=0;
-        jump=0;
-      end
-      
-      6'b000100: begin // beq
-        regWrite=0;
-        regDst=0;
-        MemToReg=0;
-        ALUSrc=0;
-        ALUOp=2'b01;
-        MemWrite=0;
-        MemRead=0;
-        branch=1;
-        jump=0;
-      end
-      
-      6'b100011: begin // lw
-        regWrite=1;
-        regDst=0;
-        MemToReg=1;
-        ALUSrc=1;
-        ALUOp=2'b00;
-        MemWrite=0;
-        MemRead=1;
-        branch=0;
-        jump=0;
-      end
-      
-      6'b101011: begin // sw
-        regWrite=0;
-        regDst=0;
-        MemToReg=0;
-        ALUSrc=1;
-        ALUOp=2'b00;
-        MemWrite=1;
-        MemRead=0;
-        branch=0;
-        jump=0;
-      end
-      
-      6'b000010: begin // jump
-        regWrite=0;
-        regDst=0;
-        MemToReg=0;
-        ALUSrc=0;
-        ALUOp=2'b00;
-        MemWrite=0;
-        MemRead=0;
-        branch=0;
-        jump=1;
-      end
+    // Define sinais de controle com base no opcode
+    always_comb begin
+        case (Opcode)
+            6'b000000: begin                 // Instruções R-type
+                RegDst = 1;
+                ALUSrc = 0;
+                MemtoReg = 0;
+                RegWrite = 1;
+                MemRead = 0;
+                MemWrite = 0;
+                Branch = 0;
+                ALUOp = 2'b10;
+            end
+            6'b100011: begin                 // lw (load word)
+                RegDst = 0;
+                ALUSrc = 1;
+                MemtoReg = 1;
+                RegWrite = 1;
+                MemRead = 1;
+                MemWrite = 0;
+                Branch = 0;
+                ALUOp = 2'b00;
+            end
+            6'b101011: begin                 // sw (store word)
+                RegDst = 0;
+                ALUSrc = 1;
+                MemtoReg = 0;
+                RegWrite = 0;
+                MemRead = 0;
+                MemWrite = 1;
+                Branch = 0;
+                ALUOp = 2'b00;
+            end
+            6'b000100: begin                 // beq (branch equal)
+                RegDst = 0;
+                ALUSrc = 0;
+                MemtoReg = 0;
+                RegWrite = 0;
+                MemRead = 0;
+                MemWrite = 0;
+                Branch = 1;
+                ALUOp = 2'b01;
+            end
+            default: begin                   // Valores padrão para opcodes inválidos
+                RegDst = 0;
+                ALUSrc = 0;
+                MemtoReg = 0;
+                RegWrite = 0;
+                MemRead = 0;
+                MemWrite = 0;
+                Branch = 0;
+                ALUOp = 2'b00;
+            end
+        endcase
+    end
 
-    endcase
+    // Define ALUControl com base em ALUOp e Funct para instruções R-type
+    always_comb begin
+        case (ALUOp)
+            2'b00: ALUControl = 3'b010;      // ADD para lw e sw
+            2'b01: ALUControl = 3'b110;      // SUB para beq
+            2'b10: begin                     // R-type: usa Funct
+                case (Funct)
+                    6'b100000: ALUControl = 3'b010; // ADD
+                    6'b100010: ALUControl = 3'b110; // SUB
+                    6'b100100: ALUControl = 3'b000; // AND
+                    6'b100101: ALUControl = 3'b001; // OR
+                    6'b101010: ALUControl = 3'b111; // SLT
+                    default: ALUControl = 3'b000;   // Padrão
+                endcase
+            end
+            default: ALUControl = 3'b000;    // Padrão
+        endcase
+    end
 
-  end
-  
 endmodule
