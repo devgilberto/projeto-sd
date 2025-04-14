@@ -12,17 +12,19 @@ module test;
   logic rst;
   
   initial begin
-    
     $dumpfile("dump.vcd");
     $dumpvars(1);
 
-    clk=1;
-   	rst=1;
-    #5
-    rst=0;
+    clk = 1;
+    rst = 1;
+    #5;
+    rst = 0;
     
+    // Simulação de 100 ns
+    #100;
+    $finish;
   end
   
-  always #1 clk=~clk;
+  always #1 clk = ~clk;
   
 endmodule
