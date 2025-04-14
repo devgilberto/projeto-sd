@@ -1,11 +1,12 @@
-08 00 00 01// jump to line 2
-20 00 00 02// add 2 to register 0
-AC 00 00 03// sw from reg 0 to mem address 5
-00 20 08 22// sub: reg1=reg1-reg0
-10 20 00 00// beq reg1=reg0 (not taken)
-00 21 08 22// sub reg1=reg1-reg1
-8C 01 00 03// lw: reg1=mem[5]
-8C 02 00 03// lw: reg2=mem[5]
-10 22 FF FE// beq reg1=reg2 go to line 8(taken)
-08 00 00 00// jump to start
+// Instruções em hexadecimal
+08 00 00 01 // jump to line 2
+20 00 00 02 // add 2 to register 0
+AC 00 00 03 // sw from reg 0 to mem address 5
+00 20 08 22 // sub: reg1 = reg1 - reg0
+10 20 00 00 // beq reg1 = reg0 (not taken)
+00 21 08 22 // sub: reg1 = reg1 - reg1
+8C 01 00 03 // lw:  reg1 = mem[5]
+8C 02 00 03 // lw:  reg2 = mem[5]
+10 22 FF FE // beq reg1 = reg2 go to line 8 (taken)
+08 00 00 00 // jump to start
 EE FF EE FF
