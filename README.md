@@ -5,51 +5,6 @@ Disponível para execução em:
 [https://www.edaplayground.com/x/5Eje](https://www.edaplayground.com/x/5Eje)
 
 ---
-# Passo a passo de como rodar a simulação e explicação do output
-Verifique os Arquivos  
-No painel esquerdo, confira:
-MIPS_connectivity.sv: Contém o processador MIPS monociclo com memória de instruções inicializada com um programa de teste (ex.: addi $v0, $zero, 5).
-
-testbench.sv: Configura clock, reset e monitora saídas (PC, instruções, registradores).
-
-O programa de teste na memória de instruções realiza operações como carregar valores, subtração e OR.
-
-Configure a Simulação  
-No menu superior, selecione:
-Tool: Icarus Verilog (ou ModelSim, se disponível).
-
-Language: SystemVerilog.
-
-Marque testbench.sv como o testbench principal.
-
-Em "Run Options", deixe o tempo de simulação padrão (ex.: 100ns) ou ajuste para #200 em testbench.sv se necessário.
-
-(Opcional) Ative o "Dump VCD" para gerar waveforms.
-
-Execute a Simulação  
-Clique no botão Run.  
-
-O EDA Playground compilará os arquivos e rodará o testbench, simulando o processador executando o programa.
-
-Verifique as Saídas  
-No console (abaixo do código), veja as saídas geradas por $monitor. Exemplo:
-
-Time=0   PC=00000000 Instr=20020005 Reg_v0=xxxxxxxx
-Time=10  PC=00000004 Instr=2003000c Reg_v0=00000005
-Time=20  PC=00000008 Instr=2067fff7 Reg_v1=0000000c
-
-Isso mostra:
-O PC avançando (0, 4, 8, ...).
-
-Instruções executadas (ex.: 20020005 é addi $v0, $zero, 5).
-
-Registradores atualizados (ex.: $v0 = 5, $v1 = 12).
-
-(Opcional) Clique em View Waveforms para visualizar sinais como clock, PC e registradores.
-
-
-
----
 
 # Funcionalidades do MIPS
 
