@@ -38,8 +38,8 @@ module registerFile #(
       regs[wrAds] <= D;
   end
   
-  assign Q1 = regs[rdAds1];
-  assign Q2 = regs[rdAds2];
+  assign Q1 = rdAds1 == 0 ? 0 : regs[rdAds1];
+  assign Q2 = rdAds2 == 0 ? 0 : regs[rdAds2];
 endmodule
 
 module ALU #(
@@ -125,8 +125,10 @@ module dataMem #(
   end
   
   always_ff @(posedge clk) begin
-    if (wrEn)
+    if (wrEn) begin
       MEM[wrRdAds] <= D;
+      $display("MEM[%0d] = %08h", wrRdAds, D);
+    end
   end
 endmodule
 
@@ -134,16 +136,16 @@ module instMem #(
   parameter adsWidth = 4,
   parameter byteWidth = 8
 )(
-  input  logic [adsWidth-1:0] rdAds,
+  input  logic [adsWidth-1:0] ads,
   output logic [4*byteWidth-1:0] Q
 );
-  logic [4*byteWidth-1:0] MEM [0:2**adsWidth-1];
+  logic [4*byteWidth-1:0] IMEM [2**adsWidth-1:0];
   
   initial begin
-    $readmemh("MIPS_instructions.txt", MEM);
-    for (int i = 0; i < 10; i++)
-      $display("MEM[%0d] = %h", i, MEM[i]);
-  end  
+    $readmemh("MIPS_instructions.txt", IMEM);
+    for (int i = 0; i < 9; i++)
+      $display("MEM[%0d] = %h", i, IMEM[i]);
+  end
   
-  assign Q = MEM[rdAds];
+  assign Q = IMEM[ads];
 endmodule
