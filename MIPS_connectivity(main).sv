@@ -45,7 +45,7 @@ module MIPS #(
     
   always_ff @(posedge clk) begin
     if (!rst)
-      $display("%0d %0d", PCout/4, ALUout); // Saída simplificada
+      $display("%0d %0d", PCout/4, ALUout);
   end
 
 endmodule
