@@ -11,7 +11,7 @@ module test;
     #10;
     rst = 0;
     
-    #150; // Aumentei
+    #100; 
     $finish;
   end
   
