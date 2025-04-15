@@ -69,7 +69,7 @@ module controller (
         jump     = 1;
       end
       6'b001000: begin // addi
-        regWrite = 0; // Não escrever em $0
+        regWrite = 1;
         regDst   = 0;
         MemToReg = 0;
         ALUSrc   = 1;
