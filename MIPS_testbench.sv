@@ -11,7 +11,7 @@ module test;
     #10;
     rst = 0;
     
-    #100; 
+    #90; 
     $finish;
   end
   
